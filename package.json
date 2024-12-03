@@ -1,0 +1,25 @@
+{
+  "name": "rownd-cli",
+  "version": "1.0.0",
+  "description": "Rownd CLI tool",
+  "main": "dist/cli.js",
+  "bin": {
+    "rownd": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "npm run build && npm run start",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "@iarna/toml": "^2.2.5",
+    "dotenv": "^16.0.3",
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
