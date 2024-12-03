@@ -1,10 +1,16 @@
 {
-  "name": "rownd-cli",
-  "version": "1.0.0",
+  "name": "@roundrobtest/rownd-cli",
+  "version": "0.1.1",
   "description": "Rownd CLI tool",
   "main": "dist/cli.js",
   "bin": {
     "rownd": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",
