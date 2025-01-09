@@ -1,6 +1,7 @@
 import { getConfig, setSelectedApp } from '../config';
 import * as readline from 'readline';
 import { createOrUpdateToml } from '../utils/toml';
+import { TokenManager } from '../utils/token-manager';
 
 interface RowndApp {
   id: string;
@@ -17,16 +18,19 @@ export async function listApps(): Promise<RowndApp[]> {
   const config = getConfig();
   
   if (!config.selectedAccountId) {
-    console.error('No account selected. Please select an account first:');
-    console.error('rownd account select');
+    console.error('No account selected. Please run: rownd account select');
     process.exit(1);
   }
 
   try {
     console.log('Fetching apps for account:', config.selectedAccountId);
+    const tokenManager = TokenManager.getInstance();
+    await tokenManager.init();
+    const token = await tokenManager.getValidToken();
+
     const response = await fetch(`${config.apiUrl}/accounts/${config.selectedAccountId}/applications`, {
       headers: {
-        'Authorization': `Bearer ${config.token}`
+        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -38,11 +42,6 @@ export async function listApps(): Promise<RowndApp[]> {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Debug info:');
-      console.error('Status:', response.status);
-      console.error('Status Text:', response.statusText);
-      console.error('Response:', errorText);
-      console.error('URL:', `${config.apiUrl}/accounts/${config.selectedAccountId}/applications`);
       try {
         const errorData = JSON.parse(errorText);
         throw new Error(`Failed to fetch apps: ${errorData.message || errorText}`);
@@ -51,7 +50,7 @@ export async function listApps(): Promise<RowndApp[]> {
       }
     }
 
-    const result: AppsResponse = await response.json();
+    const result = await response.json();
     console.log(`Found ${result.total_results} apps`);
     return result.results || [];
   } catch (error) {
@@ -103,20 +102,46 @@ export async function selectApp(): Promise<void> {
   });
 }
 
-export async function displayApps() {
-  const apps = await listApps();
-  const config = getConfig();
-  
-  console.log('\nAvailable Apps:');
-  console.log('------------------');
-  
-  if (apps.length > 0) {
-    apps.forEach(app => {
-      const isSelected = app.id === config.selectedAppId;
-      console.log(`${isSelected ? '* ' : '  '}${app.name} (${app.id})`);
+export async function displayApps(accountId: string) {
+  try {
+    const tokenManager = TokenManager.getInstance();
+    await tokenManager.init();
+    const token = await tokenManager.getValidToken();
+
+    const config = getConfig();
+    const response = await fetch(`${config.apiUrl}/accounts/${accountId}/applications`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
-    console.log('\n* indicates currently selected app');
-  } else {
-    console.log('No apps found');
+
+    console.log('Debug - API URL:', `${config.apiUrl}/accounts/${accountId}/applications`);
+    console.log('Debug - Token:', token.substring(0, 20) + '...');
+    
+    console.log('Debug - Response status:', response.status);
+    const responseText = await response.text();
+    console.log('Debug - Response body:', responseText);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch apps: ${responseText}`);
+    }
+
+    const result = JSON.parse(responseText);
+    console.log(`Found ${result.total_results || 0} apps`);
+    
+    if (result.results && result.results.length > 0) {
+      console.log('\nAvailable Apps:');
+      console.log('------------------');
+      result.results.forEach((app: any) => {
+        console.log(`${app.name} (${app.id})`);
+      });
+    } else {
+      console.log('No apps found');
+    }
+    
+    return result.results;
+  } catch (error) {
+    console.error('Failed to fetch apps:', error);
+    throw error;
   }
 }

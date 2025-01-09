@@ -1,6 +1,6 @@
 {
   "name": "@roundrobtest/rownd-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Rownd CLI tool",
   "main": "dist/cli.js",
   "bin": {
@@ -19,12 +19,16 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "commander": "^11.0.0",
     "@iarna/toml": "^2.2.5",
+    "commander": "^11.0.0",
     "dotenv": "^16.0.3",
-    "node-fetch": "^3.3.0"
+    "eventsource": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.0",
+    "ora": "^5.4.1"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^18.0.0",
     "typescript": "^5.0.0"
   }

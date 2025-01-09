@@ -3,6 +3,7 @@ import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
 import { setSelectedApp } from '../config';
 import { createOrUpdateToml } from '../utils/toml';
+import { TokenManager } from '../utils/token-manager';
 
 interface ApplicationResponse {
   id: string;
@@ -36,10 +37,11 @@ function generateSubdomain(name: string): string {
 async function createApiKey(appId: string, config: any): Promise<ApiKeyResponse | null> {
   try {
     console.log('\nCreating API key...');
+    const token = await TokenManager.getInstance().getValidToken();
     const response = await fetch(`${config.apiUrl}/applications/${appId}/creds`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -60,6 +62,45 @@ async function createApiKey(appId: string, config: any): Promise<ApiKeyResponse 
   }
 }
 
+async function setInitialSchema(appId: string, token: string) {
+  const config = getConfig();
+  const schema = {
+    user_verification_fields: ["email"],
+    schema: {
+      email: {
+        type: "string",
+        required: false,
+        data_category: "pii_basic",
+        display_name: "Email",
+        owned_by: "user",
+        user_visible: true
+      },
+      nick_name: {
+        type: "string",
+        required: false,
+        data_category: "pii_basic",
+        display_name: "Nick name",
+        owned_by: "user",
+        user_visible: true
+      },
+      // ... rest of schema fields
+    }
+  };
+
+  const response = await fetch(`${config.apiUrl}/applications/${appId}/schema`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(schema)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to set schema: ${await response.text()}`);
+  }
+}
+
 export async function createApp(name: string) {
   const config = getConfig();
   
@@ -68,6 +109,11 @@ export async function createApp(name: string) {
     console.error('rownd select');
     process.exit(1);
   }
+
+  // Initialize token manager
+  const tokenManager = TokenManager.getInstance();
+  await tokenManager.init();
+  const token = await tokenManager.getValidToken();
 
   const subdomain = generateSubdomain(name);
   console.log(`Creating app "${name}" with subdomain "${subdomain}" for account ${config.selectedAccountId}...`);
@@ -113,7 +159,7 @@ export async function createApp(name: string) {
             enabled: true
           }
         },
-        show_app_icon: false
+        show_app_icon: true
       }
     },
     subdomain: subdomain,
@@ -125,7 +171,7 @@ export async function createApp(name: string) {
     const createResponse = await fetch(`${config.apiUrl}/applications`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(appConfig)
@@ -181,6 +227,8 @@ ROWND_APP_SECRET=${apiKey.secret}
 
     // Create rownd.toml
     await createOrUpdateToml(app.id, config);
+
+    await setInitialSchema(app.id, token);
 
   } catch (error) {
     if (error instanceof Error) {

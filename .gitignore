@@ -40,3 +40,17 @@ temp/
 
 rownd.toml
 
+# Exclude all JSON files
+*.json
+
+# Include package files
+!package.json
+!package-lock.json
+
+*.png
+*.sng
+*.yaml
+*.toml
+*.sh
+
+

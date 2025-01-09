@@ -1,4 +1,5 @@
 import { getConfig } from '../config';
+import { TokenManager } from '../utils/token-manager';
 
 interface ApiKeyResponse {
   name: string;
@@ -11,25 +12,19 @@ interface ApiKeyResponse {
 }
 
 export async function createApiKey(appId: string, name: string = 'CLI generated'): Promise<ApiKeyResponse | null> {
-  const config = getConfig();
-
-  if (!config.token) {
-    console.error('Authentication required. Please set your JWT token using:');
-    console.error('rownd config set-token <your-jwt-token>');
-    process.exit(1);
-  }
-
   try {
+    const tokenManager = TokenManager.getInstance();
+    await tokenManager.init();
+    const token = await tokenManager.getValidToken();
+
     console.log(`\nCreating API key for app ${appId}...`);
-    const response = await fetch(`${config.apiUrl}/applications/${appId}/creds`, {
+    const response = await fetch(`${getConfig().apiUrl}/applications/${appId}/creds`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        name: name
-      })
+      body: JSON.stringify({ name })
     });
 
     if (!response.ok) {
@@ -41,7 +36,6 @@ export async function createApiKey(appId: string, name: string = 'CLI generated'
     const apiKey = await response.json();
     console.log('\n✅ Successfully created API key');
     
-    // Display the credentials
     console.log('\nAPI Key Credentials:');
     console.log('-------------------');
     console.log(`App Key: ${apiKey.client_id}`);
